@@ -8,10 +8,11 @@ metadata:
         nginx.ingress.kubernetes.io/auth-realm: "Realm Example Text"
 spec:
     rules:
-        - host: queue.fleetman.com
+        - host: k8s.queue.transier.industries
           http:
             paths:
                 - path: /
                   backend:
                     serviceName: fleetman-queue
                     servicePort: 8161
+
