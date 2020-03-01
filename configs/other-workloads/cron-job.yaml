@@ -1,0 +1,17 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+    name: cron-job-example
+spec: #cronjob
+    schedule: "* * * * *"
+    jobTemplate:
+        spec: #job
+            template:
+                spec: #Pod
+                    containers:
+                        - name: python-example
+                          image: python:slim
+                          command: ["python"]
+                          args: ["-c", "import time; print('starting'); time.sleep(15); print('done');"]
+                    restartPolicy: Never
+            backoffLimit: 2

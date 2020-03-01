@@ -73,10 +73,220 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
 - StorageClass
   - similar to PersistentVolume… it will become a PersistentVolume when it is applied, it will be dynamically created.
 
-### Secrets
+### Resource Requests
 
-- Not encrypted
-- A place to put configuration and ensure it won’t be written to system logs
+- Enables cluster manager to determine if a node has sufficient memory/cpu requirements to handle a given pod
+- If no available node, pod will fail to deploy
+- Does not change the runtime behavior of the Pod
+- specified in container definition
+- Minikube
+  - show available resources
+    - kubectl describe minikube
+    - available resources
+      - Capacity (available the node)
+      - Allocatable (available pods)
+- Memory Requests
+- CPU Requests
+  _ 1 CPU = 1vCPU
+  _ 100m = 100 millicores = .1CPU
+
+### Resource Limits
+
+- Have an impact on runtime behavior
+- Safety net for misbehaving containers
+- Must be at least the value specified in the request
+- Memory
+  - Container will be killed if the actual memory usage of the container at runtime exceeds the limit
+  - The Pod will remain and the container will attempt to restart
+- CPU
+  - CPU is throttled at the specified limit
+
+### Metrics and Profiling
+
+- Available as a minikube addon
+- Enable: minikube addons enable metrics-server
+- kubectl top node
+- kubectl top pod
+- Dashboard
+  - minikube
+    - minikube addons enable dashboard
+    - minikube dashboard
+
+### Horizontal Pod Auto-scaling
+
+- Automatically resize the cluster depending on current workload
+- Requires metrics-server
+- You’re autoscaling the deployment not the pods
+- Can set an HPA rule that will automatically update the number of replicas in the deployment
+- Example:
+  - if pod uses > 50% of cpu request, autoscale to a max of 5 pods
+  - similarly, scale down as needed
+- Rules are setup for each deployment
+- Best to capture in yaml but here’s the command:
+  - kubectl autoscale deployment api-gateway --cpu-percent 400 --min 1 --max 4
+  - cpu-percent is relative to the request
+  - cpu request for api-gateway is set at 50m, so this would scale at 200m
+- kubectl get hpa
+  - targets % is current usage of request (50m)
+- Outputting the yaml config for the HPA object
+  - kubectl get hpa api-gateway -o yaml
+  - strip out unnecessary properties
+
+### Readiness / Liveness Probes
+
+- Can be an http request, a command to execute against the container (does a exec on the container), or a tcp probe
+- Readiness Probes
+  - configured in the deployment (at the container)
+  - Run when the container starts.
+  - will not route traffic until the the instance reports that it is ready for traffice
+- Liveness Probes
+  - Run continually
+  - If the probe fails, K8s will restart the container
+
+### QOS
+
+- Used for already running pods
+- Guaranteed
+  - label applied when cpu request/limit AND memory request/limit are specified AND are request/limit are the same value
+- Burstable
+  - label applied when either cpu or memory request but no limit
+- Best Effort \* label applied when no requests/limits are specified.
+  Priority
+- Used when scheduling a new pod
+- Just a number
+- New pod with a higher priority can evict lower priority pod. The evicted pod will then be rescheduled.
+
+### Configmaps
+
+- share across pods
+- immutable (currently) for running pods.
+  - workarounds:
+    - bounce the pods or...
+    - version the (metadata) name of the configmap… then you have update all references to that name
+- Injecting as an env var
+  - container
+    - envFrom:
+      - -configMapReg:
+        - name: <name of configMap>
+- Can also volume mount the config map
+  - will create as file
+
+### Secret
+
+- not encrypted
+- similar to configmap
+- just masks output in console log (e.g. kubectl describe secret)
+
+### Ingress on minikube
+
+- enable the addon: minikube addons enable ingress
+  - will create an nginx ingress controller deployment (pod/service)
+  - no longer creates a default-http-backend pod (at least not one that I could find)
+- Applying Basic Auth
+  - generate a username/password:
+    - htpasswd -c auth admin
+      - filename must be ‘auth'
+  - Add config to ingress yaml as described here: https://kubernetes.github.io/ingress-nginx/examples/auth/basic/
+  - You can have multiple ingress files to partition auth / no auth routes. e.g.: ingress-secure, ingress-public
+
+###Ingress on AWS
+
+- Installation Guide: https://kubernetes.github.io/ingress-nginx/deploy/
+- Grab the prereq config: wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml
+- kubectl apply -f mandatory.yaml
+  - creates a new namespace: ingress-nginx
+- AWS: https://kubernetes.github.io/ingress-nginx/deploy/#aws
+- Layer 4 vs Layer 7
+  - Layer 4
+    - lower-level balancer: inspects the raw packets (TCP)
+  - Layer 7
+    - Works at HTTP level, can get access to whether it is a get or post
+- Using Layer 4 in this example because apps are using websocket connections don’t get through
+- In AWS deployment, there’s a loadbalancer in front of the ingress controller
+- Couldn’t get it working with /etc/hosts entry
+- Route53
+  - configure an alias for app and queue
+  - both point at the load balancer
+  - update ingress-public/secure yaml files to reference the correct subdomain.
+- HTTPS
+  _ options
+  _ set up ingress controller to terminate the ssl connection
+  _ get/install cert … then you’re stuck managing that cert.
+  _ all traffic coming though the load balancer would be encrypted as far as the ingress controller.
+  _ http from ingress to services
+  _ set up the loadbalancer to terminate the ssl
+  _ easier because aws can handle most of the cert management
+  _ don’t have to pay for the cert
+  _ configuring https on the load balancer
+  _ Certificate Manager
+  _ request public certificate
+  _ _.<domain> (subdomains)
+  _ <domain> (root)
+  _ expand option and click add to route 53 button
+  _ modify service-l4.yaml
+  _ annotations
+  _ service.beta.kubernetes.io/aws-load-balancer-ssl-cert: “<arn for the cert (sub)>"
+  _ service.beta.kubernetes.io/aws-load-balancer-backend-protocol: “tcp” # because demo uses websockets
+  _ service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+  _ ports
+  _ since we’re terminating on the load balancer, we want port 443 to have a target port of 80
+  _ the request is unencrypted at the load balancer so we want to make sure we’re forwarding the unencrypted request to port 80 instead of 443 (which the ingress control would complain about)
+  _ forcing http redirect to https
+  _ Can add custom configuration to patch-configmap-l4.yaml
+  _ https://gist.github.com/DickChesterwood/3557a4f30f056703a4e1b9892491f531
+  \_ force-ssl-redirect: “true” should be all that is needed but websockets might be requiring more config.
+
+### Other Workloads
+
+- Job
+
+  - creates a pod and k8s will ensure that it runs to completion (batch job)
+  - kubernetes will reschedule a pod if it completes
+    - could add a restartPolicy to the container (default is always but can be onFailure or never)
+    - a completed Pod will not be automatically deleted
+    - There’s a TTL Controller that can perform cleanup
+    - pod won’t restart container on error status
+
+- CronJobs
+
+  - wrapper around regular job
+  - nothing special, does what it says.
+
+- DaemonSets
+
+  - Ensures that all nodes run a copy of a pod
+  - When a new node is added to the cluster, the pod will be added to the node.
+  - Deleting a daemonSet will cleanup the associated pods
+
+- StatefulSets
+  _ a statefulSet is NOT used/needed for persistence
+  _ Sometimes you have pods that must have known and predictable names
+  _ Usually when you want the clients to be able to call the pods directly using their name (via a ‘headless’ service). You client needs to address specific instances of the pod. e.g: first call pod1, then call pod2
+  _ Originally called ‘petSet'
+  _ Pods will have predictable names (with incrementing suffix)
+  _ Pods will always start up in sequence
+  _ clients can address them by name
+  _ typical use case
+  _ you have database pod AND you want to replicate it (scale it out)
+  _ usually you can’t replicate using deployments
+  _ Mongo example
+  _ in a mongo cluster, the cluster will elect a leader
+  _ primary
+  _ others are secondary
+  _ writes need to be made to the primary, from the primary mongo will copy to the secondaries
+  _ client needs to write to a specific url: e.g. mongodb://mongo-server-1
+  _ When you make a call to headless service, the url is slightly different: comma separated list of named pods followed by the service
+  _ example:
+  _ mongodb://<pod>.<service>,<pod>.<service>
+  _ mongodb://mongo-0.mongodb,mongo-1.mongodb,mongo-2.mongodb
+  _ since all the pods are referenced in the url, the client will be able to find the primary.
+  _ Typically, you wouldn’t want to have database pods in a cluster, you’d want it to live externally so you can better manage the database, backups, recovery
+  _ Prefer a hosted service instead.
+  _ documentdb is similar to mongo
+  _ it save a lot time
+  _ headless service
+  _ there’s no syntax for a headless service
+  _ it is just a service that connects to a stateful-set \*
 
 ---
 
@@ -215,6 +425,18 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
 ##
 
 ---
+
+========
+
+Minikube
+_ start: minikube start --memory 4096
+_ minikube docker-env
+_ eval \$(minikube docker-env)
+_ configures shell to expose minikube docker
+
+See everything that’s running in the cluster
+
+- kubectl get all --all-namespaces
 
 ## Troubles
 
