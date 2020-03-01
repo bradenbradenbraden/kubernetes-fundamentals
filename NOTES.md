@@ -210,31 +210,31 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
   - update ingress-public/secure yaml files to reference the correct subdomain.
 - HTTPS
   - options
-  - set up ingress controller to terminate the ssl connection
-  - get/install cert … then you’re stuck managing that cert.
-  - all traffic coming though the load balancer would be encrypted as far as the ingress controller.
-  - http from ingress to services
-  - set up the loadbalancer to terminate the ssl
-  - easier because aws can handle most of the cert management
-  - don’t have to pay for the cert
+    - set up ingress controller to terminate the ssl connection
+      - get/install cert … then you’re stuck managing that cert.
+      - all traffic coming though the load balancer would be encrypted as far as the ingress controller.
+      - http from ingress to services
+    - set up the loadbalancer to terminate the ssl
+      - easier because aws can handle most of the cert management
+      - don’t have to pay for the cert
   - configuring https on the load balancer
-  - Certificate Manager
-  - request public certificate
-  - .<domain> (subdomains)
-  - <domain> (root)
-  - expand option and click add to route 53 button
+    - Certificate Manager
+      - request public certificate
+        - .<domain> (subdomains)
+        - <domain> (root)
+      - expand option and click add to route 53 button
   - modify service-l4.yaml
-  - annotations
-  - service.beta.kubernetes.io/aws-load-balancer-ssl-cert: “<arn for the cert (sub)>"
-  - service.beta.kubernetes.io/aws-load-balancer-backend-protocol: “tcp” # because demo uses websockets
-  - service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-  - ports
-  - since we’re terminating on the load balancer, we want port 443 to have a target port of 80
-  - the request is unencrypted at the load balancer so we want to make sure we’re forwarding the unencrypted request to port 80 instead of 443 (which the ingress control would complain about)
-  - forcing http redirect to https
-  - Can add custom configuration to patch-configmap-l4.yaml
-  - https://gist.github.com/DickChesterwood/3557a4f30f056703a4e1b9892491f531
-  - force-ssl-redirect: “true” should be all that is needed but websockets might be requiring more config.
+    - annotations
+      - service.beta.kubernetes.io/aws-load-balancer-ssl-cert: “<arn for the cert (sub)>"
+      - service.beta.kubernetes.io/aws-load-balancer-backend-protocol: “tcp” # because demo uses websockets
+      - service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+      - ports
+        - since we’re terminating on the load balancer, we want port 443 to have a target port of 80
+        - the request is unencrypted at the load balancer so we want to make sure we’re forwarding the unencrypted request to port 80 instead of 443 (which the ingress control would complain about)
+    - forcing http redirect to https
+      - Can add custom configuration to patch-configmap-l4.yaml
+      - https://gist.github.com/DickChesterwood/3557a4f30f056703a4e1b9892491f531
+      - force-ssl-redirect: “true” should be all that is needed but websockets might be requiring more config.
 
 ### Other Workloads
 
@@ -266,27 +266,24 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
   - Pods will have predictable names (with incrementing suffix)
   - Pods will always start up in sequence
   - clients can address them by name
-  - typical use case
-  - you have database pod AND you want to replicate it (scale it out)
-  - usually you can’t replicate using deployments
+  - typical use case: you have database pod AND you want to replicate it (scale it out)
   - Mongo example
-  - in a mongo cluster, the cluster will elect a leader
-  - primary
-  - others are secondary
-  - writes need to be made to the primary, from the primary mongo will copy to the secondaries
-  - client needs to write to a specific url: e.g. mongodb://mongo-server-1
+    - in a mongo cluster, the cluster will elect a leader
+      - primary
+      - others are secondary
+    - writes need to be made to the primary, from the primary mongo will copy to the secondaries
+    - client needs to write to a specific url: e.g. mongodb://mongo-server-1
   - When you make a call to headless service, the url is slightly different: comma separated list of named pods followed by the service
-  - example:
-  - mongodb://<pod>.<service>,<pod>.<service>
-  - mongodb://mongo-0.mongodb,mongo-1.mongodb,mongo-2.mongodb
-  - since all the pods are referenced in the url, the client will be able to find the primary.
+    - example:
+      - mongodb://<pod>.<service>,<pod>.<service>
+      - mongodb://mongo-0.mongodb,mongo-1.mongodb,mongo-2.mongodb
+    - since all the pods are referenced in the url, the client will be able to find the primary.
   - Typically, you wouldn’t want to have database pods in a cluster, you’d want it to live externally so you can better manage the database, backups, recovery
-  - Prefer a hosted service instead.
-  - documentdb is similar to mongo
-  - it save a lot time
+    - Prefer a hosted service instead.
+    - documentdb is similar to mongo
   - headless service
-  - there’s no syntax for a headless service
-  - it is just a service that connects to a stateful-set \*
+    - there’s no syntax for a headless service
+    - it is just a service that connects to a stateful-set
 
 ---
 
