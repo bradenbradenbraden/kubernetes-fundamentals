@@ -209,32 +209,32 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
   - both point at the load balancer
   - update ingress-public/secure yaml files to reference the correct subdomain.
 - HTTPS
-  _ options
-  _ set up ingress controller to terminate the ssl connection
-  _ get/install cert … then you’re stuck managing that cert.
-  _ all traffic coming though the load balancer would be encrypted as far as the ingress controller.
-  _ http from ingress to services
-  _ set up the loadbalancer to terminate the ssl
-  _ easier because aws can handle most of the cert management
-  _ don’t have to pay for the cert
-  _ configuring https on the load balancer
-  _ Certificate Manager
-  _ request public certificate
-  _ _.<domain> (subdomains)
-  _ <domain> (root)
-  _ expand option and click add to route 53 button
-  _ modify service-l4.yaml
-  _ annotations
-  _ service.beta.kubernetes.io/aws-load-balancer-ssl-cert: “<arn for the cert (sub)>"
-  _ service.beta.kubernetes.io/aws-load-balancer-backend-protocol: “tcp” # because demo uses websockets
-  _ service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-  _ ports
-  _ since we’re terminating on the load balancer, we want port 443 to have a target port of 80
-  _ the request is unencrypted at the load balancer so we want to make sure we’re forwarding the unencrypted request to port 80 instead of 443 (which the ingress control would complain about)
-  _ forcing http redirect to https
-  _ Can add custom configuration to patch-configmap-l4.yaml
-  _ https://gist.github.com/DickChesterwood/3557a4f30f056703a4e1b9892491f531
-  \_ force-ssl-redirect: “true” should be all that is needed but websockets might be requiring more config.
+  - options
+  - set up ingress controller to terminate the ssl connection
+  - get/install cert … then you’re stuck managing that cert.
+  - all traffic coming though the load balancer would be encrypted as far as the ingress controller.
+  - http from ingress to services
+  - set up the loadbalancer to terminate the ssl
+  - easier because aws can handle most of the cert management
+  - don’t have to pay for the cert
+  - configuring https on the load balancer
+  - Certificate Manager
+  - request public certificate
+  - .<domain> (subdomains)
+  - <domain> (root)
+  - expand option and click add to route 53 button
+  - modify service-l4.yaml
+  - annotations
+  - service.beta.kubernetes.io/aws-load-balancer-ssl-cert: “<arn for the cert (sub)>"
+  - service.beta.kubernetes.io/aws-load-balancer-backend-protocol: “tcp” # because demo uses websockets
+  - service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+  - ports
+  - since we’re terminating on the load balancer, we want port 443 to have a target port of 80
+  - the request is unencrypted at the load balancer so we want to make sure we’re forwarding the unencrypted request to port 80 instead of 443 (which the ingress control would complain about)
+  - forcing http redirect to https
+  - Can add custom configuration to patch-configmap-l4.yaml
+  - https://gist.github.com/DickChesterwood/3557a4f30f056703a4e1b9892491f531
+  - force-ssl-redirect: “true” should be all that is needed but websockets might be requiring more config.
 
 ### Other Workloads
 
@@ -259,34 +259,34 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
   - Deleting a daemonSet will cleanup the associated pods
 
 - StatefulSets
-  _ a statefulSet is NOT used/needed for persistence
-  _ Sometimes you have pods that must have known and predictable names
-  _ Usually when you want the clients to be able to call the pods directly using their name (via a ‘headless’ service). You client needs to address specific instances of the pod. e.g: first call pod1, then call pod2
-  _ Originally called ‘petSet'
-  _ Pods will have predictable names (with incrementing suffix)
-  _ Pods will always start up in sequence
-  _ clients can address them by name
-  _ typical use case
-  _ you have database pod AND you want to replicate it (scale it out)
-  _ usually you can’t replicate using deployments
-  _ Mongo example
-  _ in a mongo cluster, the cluster will elect a leader
-  _ primary
-  _ others are secondary
-  _ writes need to be made to the primary, from the primary mongo will copy to the secondaries
-  _ client needs to write to a specific url: e.g. mongodb://mongo-server-1
-  _ When you make a call to headless service, the url is slightly different: comma separated list of named pods followed by the service
-  _ example:
-  _ mongodb://<pod>.<service>,<pod>.<service>
-  _ mongodb://mongo-0.mongodb,mongo-1.mongodb,mongo-2.mongodb
-  _ since all the pods are referenced in the url, the client will be able to find the primary.
-  _ Typically, you wouldn’t want to have database pods in a cluster, you’d want it to live externally so you can better manage the database, backups, recovery
-  _ Prefer a hosted service instead.
-  _ documentdb is similar to mongo
-  _ it save a lot time
-  _ headless service
-  _ there’s no syntax for a headless service
-  _ it is just a service that connects to a stateful-set \*
+  - a statefulSet is NOT used/needed for persistence
+  - Sometimes you have pods that must have known and predictable names
+  - Usually when you want the clients to be able to call the pods directly using their name (via a ‘headless’ service). You client needs to address specific instances of the pod. e.g: first call pod1, then call pod2
+  - Originally called ‘petSet'
+  - Pods will have predictable names (with incrementing suffix)
+  - Pods will always start up in sequence
+  - clients can address them by name
+  - typical use case
+  - you have database pod AND you want to replicate it (scale it out)
+  - usually you can’t replicate using deployments
+  - Mongo example
+  - in a mongo cluster, the cluster will elect a leader
+  - primary
+  - others are secondary
+  - writes need to be made to the primary, from the primary mongo will copy to the secondaries
+  - client needs to write to a specific url: e.g. mongodb://mongo-server-1
+  - When you make a call to headless service, the url is slightly different: comma separated list of named pods followed by the service
+  - example:
+  - mongodb://<pod>.<service>,<pod>.<service>
+  - mongodb://mongo-0.mongodb,mongo-1.mongodb,mongo-2.mongodb
+  - since all the pods are referenced in the url, the client will be able to find the primary.
+  - Typically, you wouldn’t want to have database pods in a cluster, you’d want it to live externally so you can better manage the database, backups, recovery
+  - Prefer a hosted service instead.
+  - documentdb is similar to mongo
+  - it save a lot time
+  - headless service
+  - there’s no syntax for a headless service
+  - it is just a service that connects to a stateful-set \*
 
 ---
 
