@@ -296,6 +296,8 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
   - `minikube ip`
   - `ssh docker@[ip]`
   - password: `tcuser`
+- configure shell to expose minikube docker
+  - eval \$(minikube docker-env)
 - enable metrics server (needed for HPA)
   - minikube addons enable metrics-server
 
@@ -418,22 +420,6 @@ Udemy: [kubernetes-microservice](https://www.udemy.com/course/kubernetes-microse
 - API Gateway - single point of contact between frontend and backend (BFF)
 
 ---
-
-##
-
----
-
-========
-
-Minikube
-_ start: minikube start --memory 4096
-_ minikube docker-env
-_ eval \$(minikube docker-env)
-_ configures shell to expose minikube docker
-
-See everything that’s running in the cluster
-
-- kubectl get all --all-namespaces
 
 ## Troubles
 
